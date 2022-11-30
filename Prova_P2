@@ -1,0 +1,176 @@
+import pyodbc
+import collections
+import json
+from zipfile import ZipFile
+import os
+from os.path import basename
+
+opcao = 1
+
+conexao = pyodbc.connect('DRIVER={SQL Server};SERVER=DESKTOP-PNR3TM5\SQLEXPRESS;DATABASE=PythonSql')
+cursor = conexao.cursor()
+
+while opcao == 1:
+    login = input("Digite o login: ")
+    senha = input("Digite a senha: ")
+
+    comando = """SELECT * FROM tb_usuarios"""
+    cursor.execute(comando)
+    row = cursor.fetchone()
+    while row is not None:
+        if(row[1] == login and row[2] == senha):
+            print("\nBem-vindo\n") 
+            opcao = 2
+        row = cursor.fetchone()
+
+while opcao != 0:
+    print("Sistema de controle\n[1] Controle de produtos\n[2] Controle de funcionários\n[3] Controle de usuários\n[4] Exporta Json compactado\n[0] Para sair")
+    opcao = int(input())
+
+    if(opcao == 1):
+        print("[1] Cadastrar produto\n[2] Relatório de produtos\n[3] Excluir produto")
+        opcao = int(input())
+
+        if(opcao == 1):
+
+            id_produto = input("Digite o id do produto: ")
+            nome = input("Digite o nome do produto: ")
+            quantidade = input("Digite a quantidade do produto: ")
+            comando = f"""INSERT INTO tb_produtos (id_produto, nome, quantidade) VALUES({id_produto}, '{nome}', '{quantidade}')"""
+            cursor.execute(comando)
+            cursor.commit()
+            opcao = 5
+
+        elif(opcao == 2): 
+
+            comando = """SELECT * FROM tb_produtos"""
+            cursor.execute(comando)
+            row = cursor.fetchone()
+            while row is not None:
+                print("ID   Produto   Quantidade")
+                print(row)
+                row = cursor.fetchone()  
+            opcao = 5    
+
+        elif(opcao == 3):
+
+            id = int(input("Insira o id do produto: "))
+            comando = f"""DELETE FROM tb_produtos WHERE id_produto = {id}"""
+            cursor.execute(comando)
+            cursor.commit()
+            opcao = 5
+
+    if(opcao == 2):
+        print("[1] Cadastrar funcionário\n[2] Relatório de funcionários\n[3] Excluir funcionário") 
+        opcao = int(input())
+
+        if(opcao == 1):
+
+            id_funcionario = input("Informe o id do funcionário: ")
+            nome = input("Informe o nome do funcionário: ")
+            rg = input("Informe o RG do funcionário: ")
+            comando = f"""INSERT INTO tb_funcionarios (id_funcionario, nome, rg) VALUES({id_funcionario}, '{nome}', '{rg}')"""
+            cursor.execute(comando)
+            cursor.commit()
+            opcao = 5
+
+        elif(opcao == 2):
+
+            comando = """SELECT * FROM tb_funcionarios"""
+            cursor.execute(comando)
+            row = cursor.fetchone()
+            while row is not None:
+                print("ID   Nome     RG")
+                print(row)
+                row = cursor.fetchone() 
+            opcao = 5
+
+        elif(opcao == 3):
+
+            id = int(input("Insira o id do funcionario: "))
+            comando = f"""DELETE FROM tb_funcionarios WHERE id_funcionario = {id}"""
+            cursor.execute(comando)
+            cursor.commit()
+            opcao = 5        
+
+    if(opcao == 3):
+        print("[1] Cadastrar Usuário\n[2] Relatório de usuário\n[3] Excluir usuário") 
+        opcao = int(input())
+
+        if(opcao == 1):
+
+            id_usuario = input("Informe o id do usuário: ")
+            identificacaoUsuario = input("Informe o usuário: ")
+            senhaUsuario = input("Informe a senha do usuário: ")
+            comando = f"""INSERT INTO tb_usuarios (id, usuario, senha   ) VALUES({id_usuario}, '{identificacaoUsuario}', '{senhaUsuario}')"""
+            cursor.execute(comando)
+            cursor.commit()
+            opcao = 5
+
+        elif(opcao == 2):
+
+            comando = """SELECT * FROM tb_usuarios"""
+            cursor.execute(comando)
+            row = cursor.fetchone()
+            while row is not None:
+                print("ID   Usuario   Senha")
+                print(row)
+                row = cursor.fetchone() 
+            opcao = 5
+
+        elif(opcao == 3):
+            id = int(input("Insira o id do usuario: "))
+            comando = f"""DELETE FROM tb_usuarios WHERE id = {id}"""
+            cursor.execute(comando)
+            cursor.commit()
+            opcao = 5
+
+    elif(opcao == 4):
+        comando = """SELECT * FROM tb_produtos"""
+        produto = collections.namedtuple("produto", "id nome quantidade")
+        produtos = []
+
+        cursor.execute(comando)
+        row = cursor.fetchone()
+        while row is not None:
+            produtos.append(produto(row[0], row[1], row[2]))
+            row = cursor.fetchone()
+        f = open(r"zip_folder\produto.json","w")
+        json.dump(produtos,f, sort_keys = True, indent = 4)
+        f.close()    
+
+        comando = """SELECT * FROM tb_funcionarios"""
+        funcionario = collections.namedtuple("funcionario", "id nome rg")
+        funcionarios = []
+
+        cursor.execute(comando)
+        row = cursor.fetchone()
+        while row is not None:
+            funcionarios.append(funcionario(row[0], row[1], row[2]))
+            row = cursor.fetchone()
+        f = open(r"zip_folder\funcionarios.json","w")
+        json.dump(funcionarios,f, sort_keys = True, indent = 4)
+        f.close()
+
+        comando = """SELECT * FROM tb_usuarios"""
+        usuario = collections.namedtuple("usuario", "id usuario senha")
+        usuarios = []
+
+        cursor.execute(comando)
+        row = cursor.fetchone()
+        while row is not None:
+            usuarios.append(usuario(row[0], row[1], row[2]))
+            row = cursor.fetchone()
+
+        f = open(r"zip_folder\usuario.json","w")
+        json.dump(usuarios,f, sort_keys = True, indent = 4)
+        f.close()
+
+        with ZipFile('arquivos_json.zip','w') as zipobj:
+            for folderName, subfolders, filenames in os.walk(r'C:\Users\User\Desktop\Caio TI\6°Semestre\TOP\zip_folder'):
+                for filename in filenames:
+                    filepath = os.path.join(folderName, filename)
+                    zipobj.write(filepath, basename(filepath))
+
+    if(opcao == 0):
+        print("Aplicação desevolvida por Caio Pereira\n Prof° Fabricio Henrique\n Prova P_2 de TOP\n\n OBRIGADO!")
